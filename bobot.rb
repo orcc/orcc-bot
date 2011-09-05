@@ -15,17 +15,33 @@ class History
     @history = []
   end
 
-  match(/.*/, :use_prefix => false)
+  match(/(.*)/, :use_prefix => false)
 
   def execute(m)
-    if m.channel? then
-      if $1 == "!history" then
-        m.user.msg "history:"
-        @history.each { |msg| m.user.msg(msg) if msg.channel == m.channel }
-      elsif $1 == "!clear_history" then
-        @history = []
+    if m.message =~ /!history(.*)/ then
+      # send history with private messages to the user depending on the channel
+      m.user.msg "history:"
+      @history.each { |msg| m.user.msg(msg) if (not m.channel?) or msg.channel == m.channel }
+    elsif m.channel? then
+      # only record messages on the channel
+      @history << HistoryMsg.new(m.user, Time.now, m.channel, m.message)
+    end
+  end
+
+end
+
+class Leave
+  include Cinch::Plugin
+  
+  match /leave (.+)/
+
+  def execute(m)
+    if not m.channel? then
+      if m.message =~ /!leave NOW!/ then
+        m.bot.channels.each { |c| c.msg "#{m.user.nick} asked me to leave... bye all!" }
+        m.bot.quit
       else
-        @history << HistoryMsg.new(m.user, Time.now, m.channel, m.message)
+	m.reply "incorrect password. I'm not leaving!"
       end
     end
   end
@@ -38,28 +54,27 @@ class Help
   match /help/
 
   def execute(m)
-    if m.channel? then
-      m.reply "Available commands: !help and !history"
-    else
-      if m.message =~ /leave (.+)/ then
-        if $1 == "NOW!" then
-          m.bot.channels.each { |c| c.msg "#{m.user.nick} asked me to leave... bye all!" }
-          m.bot.quit
-        else
-          m.reply "incorrect password. I'm not leaving!"
-        end
-      end
-    end
+    m.reply "available commands: !help and !history"
   end
 
 end
 
+# quit unless our script gets two command line arguments
+unless ARGV.length == 1
+  puts "Usage: bobot.rb channel"
+  exit
+end
+
+channel = ARGV[0]
+
 bot = Cinch::Bot.new do
   configure do |c|
     c.server = "irc.freenode.org"
-    c.channels = ["#test-bobot"]
-    c.nick = "bobot_xyz"
-    c.plugins.plugins = [Help, History]
+    c.channels = [channel]
+    c.messages_per_second = 0.5
+    c.nick = channel[1,channel.length] + "-bot"
+    c.plugins.plugins = [Help, History, Leave]
+    c.verbose = true
   end
 end
 
