@@ -61,7 +61,7 @@ end
 
 # quit unless our script gets two command line arguments
 unless ARGV.length == 1
-  puts "Usage: bobot.rb channel"
+  puts "Usage: bobot.rb channel (without the # sign)"
   exit
 end
 
@@ -70,9 +70,9 @@ channel = ARGV[0]
 bot = Cinch::Bot.new do
   configure do |c|
     c.server = "irc.freenode.org"
-    c.channels = [channel]
+    c.channels = ["#" + channel]
     c.messages_per_second = 0.5
-    c.nick = channel[1,channel.length] + "-bot"
+    c.nick = channel + "-bot"
     c.plugins.plugins = [Help, History, Leave]
     c.verbose = true
   end
