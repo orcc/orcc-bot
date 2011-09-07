@@ -2,9 +2,23 @@
 require 'cinch'
 require 'chronic'
 
-MAX_MSGS = 10000
+###############################################################################
+class AutoHello
+  include Cinch::Plugin
 
+  listen_to :join
+  def listen(m)
+    unless m.user.nick == bot.nick
+      m.reply "hi #{m.user.nick}"
+    end
+  end
+
+end
+
+###############################################################################
 class History
+  MAX_MSGS = 10000
+
   include Cinch::Plugin
 
   class HistoryMsg < Struct.new(:user, :time, :channel, :msg)
@@ -21,6 +35,15 @@ class History
   match(/(.*)/, :use_prefix => false)
 
   def execute(m)
+    # only record messages on the channel
+    if m.channel? then
+      @history << HistoryMsg.new(m.user, Time.now, m.channel, m.message)
+      if @history.size > MAX_MSGS then
+        @history.delete_at(0)
+      end
+    end
+
+    # react to messages starting with !history
     if m.message =~ /^!history(.*)/ then
       # send history with private messages to the user depending on the channel
       begin
@@ -40,17 +63,12 @@ class History
         m.user.msg "please give a date: !history yesterday, !history 2 hours ago, !history 6 in the morning, etc."
         m.user.msg "more documentation is available at http://chronic.rubyforge.org/files/README.html"
       end
-    elsif m.channel? then
-      # only record messages on the channel
-      @history << HistoryMsg.new(m.user, Time.now, m.channel, m.message)
-      if @history.size > MAX_MSGS then
-        @history.delete_at(0)
-      end
     end
   end
 
 end
 
+###############################################################################
 class Leave
   include Cinch::Plugin
   
@@ -69,6 +87,7 @@ class Leave
 
 end
 
+###############################################################################
 class Help
   include Cinch::Plugin
   
@@ -80,6 +99,7 @@ class Help
 
 end
 
+###############################################################################
 # quit unless our script gets two command line arguments
 unless ARGV.length == 1
   puts "Usage: bobot.rb channel (without the # sign)"
@@ -94,7 +114,7 @@ bot = Cinch::Bot.new do
     c.channels = ["#" + channel]
     c.messages_per_second = 0.5
     c.nick = channel + "-bot"
-    c.plugins.plugins = [Help, History, Leave]
+    c.plugins.plugins = [AutoHello, Help, History, Leave]
     c.verbose = true
   end
 end
