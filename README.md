@@ -10,6 +10,7 @@ Requirements
  * chronic
 
 On Ubuntu, type with root permissions :
+
     apt-get install ruby1.9.1
     gem install cinch
     gem install chronic
