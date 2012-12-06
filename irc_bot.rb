@@ -8,7 +8,7 @@ class AutoHello
 
   listen_to :join
   def listen(m)
-    unless m.user.nick == bot.nick
+    unless m.user.nick.end_with?("-bot")
       m.reply "hi #{m.user.nick}"
     end
   end
@@ -80,7 +80,7 @@ class Leave
         m.bot.channels.each { |c| c.msg "#{m.user.nick} asked me to leave... bye all!" }
         m.bot.quit
       else
-	m.reply "incorrect password. I'm not leaving!"
+        m.reply "incorrect password. I'm not leaving!"
       end
     end
   end
